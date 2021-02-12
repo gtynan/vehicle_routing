@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 import numpy as np
 
@@ -11,7 +11,7 @@ def _create_routing_manager(distance_matrix: np.ndarray, n_vehicles: int, depot_
     return pywrapcp.RoutingIndexManager(len(distance_matrix), n_vehicles, depot_node)
 
 
-def _create_routing_model(distance_matrix: np.ndarray, manager: pywrapcp.RoutingIndexManager, include_distance_dim: bool = False) -> pywrapcp.RoutingModel:
+def _create_routing_model(distance_matrix: np.ndarray, manager: pywrapcp.RoutingIndexManager, pickup_delivery_data: Optional[List] = None, include_distance_dim: bool = False) -> pywrapcp.RoutingModel:
     def distance_callback(from_index: int, to_index: int) -> float:
         """Calculates distance between two indicies
         """
@@ -37,10 +37,25 @@ def _create_routing_model(distance_matrix: np.ndarray, manager: pywrapcp.Routing
         distance_dimension = routing.GetDimensionOrDie(dimension_name)
         distance_dimension.SetGlobalSpanCostCoefficient(100)
 
+    if pickup_delivery_data:
+        for request in pickup_delivery_data:
+            pickup_index = manager.NodeToIndex(request[0])
+            delivery_index = manager.NodeToIndex(request[1])
+            # pick up delievry request
+            routing.AddPickupAndDelivery(pickup_index, delivery_index)
+            # constrain that same vehicle must both pick up and deliver
+            routing.solver().Add(
+                routing.VehicleVar(pickup_index) == routing.VehicleVar(
+                    delivery_index))
+            # contraint pickup must occur before delivery
+            routing.solver().Add(
+                distance_dimension.CumulVar(pickup_index) <=
+                distance_dimension.CumulVar(delivery_index))
+
     return routing
 
 
-def get_routes(distance_matrix: np.ndarray, n_vehicles: int, depot_node: int, params: pywrapcp.DefaultRoutingSearchParameters = search_parameters) -> List[int]:
+def get_routes(distance_matrix: np.ndarray, n_vehicles: int, depot_node: int, pickup_delivery_data: Optional[List] = None, params: pywrapcp.DefaultRoutingSearchParameters = search_parameters) -> List[int]:
     """Create optimal route path in a 2 dimensional array. Value i, j refers to vehicles i's jth location to visit
 
     Args:
@@ -53,7 +68,7 @@ def get_routes(distance_matrix: np.ndarray, n_vehicles: int, depot_node: int, pa
         List[int]: 2 dimensional array of routes for each vehicle
     """
     manager = _create_routing_manager(distance_matrix, n_vehicles, depot_node)
-    model = _create_routing_model(distance_matrix, manager, include_distance_dim=n_vehicles > 1) # add distance dimension if more than 1 vehicle
+    model = _create_routing_model(distance_matrix, manager, pickup_delivery_data=pickup_delivery_data, include_distance_dim=n_vehicles > 1) # add distance dimension if more than 1 vehicle
 
     solution = model.SolveWithParameters(params)
 

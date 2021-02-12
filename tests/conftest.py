@@ -1,3 +1,4 @@
+from typing import List
 import pytest
 import numpy as np
 
@@ -5,7 +6,7 @@ import numpy as np
 """
 
 @pytest.fixture(scope='session')
-def ts_distance_matrix() -> np.ndarray:
+def ts_distance_matrix() -> List[int]:
     """Traveling salesman array where i, j refers to the distance between location i and location j
     """
     return [
@@ -26,7 +27,7 @@ def ts_distance_matrix() -> np.ndarray:
 
 
 @pytest.fixture(scope='session')
-def mv_distance_matrix() -> np.ndarray:
+def mv_distance_matrix() -> List[int]:
     """Multiple vehicles array where i, j refers to the distance between location i and location j
     """
     return [
@@ -47,4 +48,20 @@ def mv_distance_matrix() -> np.ndarray:
         [468, 1016, 788, 1164, 1050, 514, 514, 662, 320, 274, 388, 650, 536, 342, 0, 764, 194],
         [776, 868, 1552, 560, 674, 1050, 1278, 742, 1084, 810, 1152, 274, 388, 422, 764, 0, 798],
         [662, 1210, 754, 1358, 1244, 708, 480, 856, 514, 468, 354, 844, 730, 536, 194, 798, 0],
+    ]
+
+
+@pytest.fixture(scope='session')
+def pickup_deliver() -> List[int]:
+    """Each row has a pickup and deliver to location index
+    """
+    return [
+        [1, 6],
+        [2, 10],
+        [4, 3],
+        [5, 9],
+        [7, 8],
+        [15, 11],
+        [13, 12],
+        [16, 14],
     ]
