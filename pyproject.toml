@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "pickup_delivery"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+numpy = "^1.20.1"
+pytest = "^6.2.2"
+fastapi = "^0.63.0"
+ortools = "^8.1.8487"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
