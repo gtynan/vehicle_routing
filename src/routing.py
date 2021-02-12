@@ -11,7 +11,7 @@ def _create_routing_manager(distance_matrix: np.ndarray, n_vehicles: int, depot_
     return pywrapcp.RoutingIndexManager(len(distance_matrix), n_vehicles, depot_node)
 
 
-def _create_routing_model(distance_matrix: np.ndarray, manager: pywrapcp.RoutingIndexManager) -> pywrapcp.RoutingModel:
+def _create_routing_model(distance_matrix: np.ndarray, manager: pywrapcp.RoutingIndexManager, include_distance_dim: bool = False) -> pywrapcp.RoutingModel:
     def distance_callback(from_index: int, to_index: int) -> float:
         """Calculates distance between two indicies
         """
@@ -24,6 +24,19 @@ def _create_routing_model(distance_matrix: np.ndarray, manager: pywrapcp.Routing
     
     # setting cost as distance (routing will attempt to minimise this cost)
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+
+    if include_distance_dim:
+        # Add Distance constraint.
+        dimension_name = 'Distance'
+        routing.AddDimension(
+            transit_callback_index,
+            0,  # no slack
+            3000,  # vehicle maximum travel distance
+            True,  # start cumul to zero
+            dimension_name)
+        distance_dimension = routing.GetDimensionOrDie(dimension_name)
+        distance_dimension.SetGlobalSpanCostCoefficient(100)
+
     return routing
 
 
@@ -40,7 +53,7 @@ def get_routes(distance_matrix: np.ndarray, n_vehicles: int, depot_node: int, pa
         List[int]: 2 dimensional array of routes for each vehicle
     """
     manager = _create_routing_manager(distance_matrix, n_vehicles, depot_node)
-    model = _create_routing_model(distance_matrix, manager)
+    model = _create_routing_model(distance_matrix, manager, include_distance_dim=n_vehicles > 1) # add distance dimension if more than 1 vehicle
 
     solution = model.SolveWithParameters(params)
 
