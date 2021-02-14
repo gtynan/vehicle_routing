@@ -1,6 +1,24 @@
 from typing import List
 import pytest
-import numpy as np
+from fastapi import FastAPI
+from asgi_lifespan import LifespanManager
+from httpx import AsyncClient
+
+
+@pytest.fixture(scope="session")
+def app():
+    from src.api.server import app
+    return app
+
+
+@pytest.fixture()
+async def client(app: FastAPI) -> AsyncClient:
+    async with LifespanManager(app):
+        async with AsyncClient(
+            app=app, base_url="http://testserver", headers={"Content-Type": "application/json"}
+        ) as client:
+            yield client
+
 
 """Source: https://developers.google.com/optimization/routing/tsp
 """
@@ -22,7 +40,7 @@ def ts_distance_matrix() -> List[int]:
         [875, 1589, 262, 466, 796, 547, 1724, 1038, 1744, 0, 679, 1272, 1162],
         [1420, 1374, 940, 1056, 879, 225, 1891, 1605, 1645, 679, 0, 1017, 1200],
         [2145, 357, 1453, 1280, 586, 887, 1114, 2300, 653, 1272, 1017, 0, 504],
-        [1972, 579, 1260, 987, 371, 999, 701, 2099, 600, 1162, 1200, 504, 0],
+        [1972, 579, 1260, 987, 371, 999, 701, 2099, 600, 1162, 1200, 504, 0]
     ]
 
 
@@ -47,7 +65,7 @@ def mv_distance_matrix() -> List[int]:
         [354, 674, 1130, 822, 708, 628, 856, 320, 662, 388, 730, 308, 194, 0, 342, 422, 536],
         [468, 1016, 788, 1164, 1050, 514, 514, 662, 320, 274, 388, 650, 536, 342, 0, 764, 194],
         [776, 868, 1552, 560, 674, 1050, 1278, 742, 1084, 810, 1152, 274, 388, 422, 764, 0, 798],
-        [662, 1210, 754, 1358, 1244, 708, 480, 856, 514, 468, 354, 844, 730, 536, 194, 798, 0],
+        [662, 1210, 754, 1358, 1244, 708, 480, 856, 514, 468, 354, 844, 730, 536, 194, 798, 0]
     ]
 
 
@@ -63,5 +81,5 @@ def pickup_deliver() -> List[int]:
         [7, 8],
         [15, 11],
         [13, 12],
-        [16, 14],
+        [16, 14]
     ]

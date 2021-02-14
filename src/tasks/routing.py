@@ -5,6 +5,8 @@ import numpy as np
 search_parameters = pywrapcp.DefaultRoutingSearchParameters()
 search_parameters.first_solution_strategy = (
     routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
+# TODO ensure solution got
+search_parameters.time_limit.seconds = 10
 
 
 def _create_routing_manager(distance_matrix: np.ndarray, n_vehicles: int, depot_node: int):

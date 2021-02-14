@@ -1,4 +1,4 @@
-from src.routing import get_routes
+from src.tasks.routing import get_routes
 
 
 def test_traveling_salesman_get_routes(ts_distance_matrix):
