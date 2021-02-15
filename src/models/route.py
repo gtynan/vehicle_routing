@@ -6,3 +6,4 @@ class Route(BaseModel):
     id: int
     start: Location
     end: Location
+    duration: int

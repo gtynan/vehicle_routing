@@ -4,8 +4,8 @@ from fastapi import FastAPI
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_200_OK
 import json
 
-from src.tasks.convert import route_list_to_model
-
+from src.models.schedule import Schedule
+from src.tasks.routing import get_routes
 
 class TestRoutes:
 
@@ -26,7 +26,5 @@ class TestRoutes:
                                 data=data)
 
         assert res.status_code == HTTP_200_OK
-        assert res.json() == route_list_to_model([[0, 16, 14, 13, 12, 0], 
-                                                  [0, 7, 1, 6, 8, 0], 
-                                                  [0, 4, 3, 15, 11, 0], 
-                                                  [0, 5, 2, 10, 9, 0]])
+        assert res.json() == [Schedule.from_raw(driver_id=i, route=row, distance_matrix=mv_distance_matrix).dict() \
+                                for i, row in enumerate(get_routes(mv_distance_matrix, 4, 0, pickup_deliver))]
