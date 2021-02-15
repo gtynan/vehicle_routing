@@ -27,18 +27,19 @@ def _create_routing_model(distance_matrix: np.ndarray, manager: pywrapcp.Routing
     # setting cost as distance (routing will attempt to minimise this cost)
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
 
+    # Add Distance constraint.
     if include_distance_dim:
-        # Add Distance constraint.
         dimension_name = 'Distance'
         routing.AddDimension(
             transit_callback_index,
             0,  # no slack
-            3000,  # vehicle maximum travel distance
+            3000,  # vehicle maximum travel distance 
             True,  # start cumul to zero
             dimension_name)
         distance_dimension = routing.GetDimensionOrDie(dimension_name)
         distance_dimension.SetGlobalSpanCostCoefficient(100)
 
+    # create pickup and delivery relationships
     if pickup_delivery_data:
         for request in pickup_delivery_data:
             pickup_index = manager.NodeToIndex(request[0])

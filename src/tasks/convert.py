@@ -7,6 +7,14 @@ from src.models.location import Location
 
 
 def route_list_to_model(routes: List[int]) -> List[Schedule]:
+    """Given a list of routes convert to a Schedule object
+
+    Args:
+        routes (List[int]): list of routes, each row should refer to a driver
+
+    Returns:
+        List[Schedule]: Converted object
+    """
     schedule = []
     # each row is a route for a specific driver
     for i, route in enumerate(routes):

@@ -11,7 +11,7 @@ class TestRoutes:
 
     @pytest.mark.asyncio
     async def test_routes_exist(self, app: FastAPI, client: AsyncClient) -> None:
-        res = await client.post(app.url_path_for("routes:create_schedule"))
+        res = await client.post(app.url_path_for("schedule:create"))
         assert res.status_code != HTTP_404_NOT_FOUND
 
     @pytest.mark.asyncio
@@ -21,7 +21,7 @@ class TestRoutes:
            "pickup_delivery": pickup_deliver
         })
         
-        res = await client.post(app.url_path_for("routes:create_schedule"), 
+        res = await client.post(app.url_path_for("schedule:create"), 
                                 params={"n_vehicles": 4, "depot_node": 0}, 
                                 data=data)
 
