@@ -5,7 +5,7 @@ import numpy as np
 search_parameters = pywrapcp.DefaultRoutingSearchParameters()
 search_parameters.first_solution_strategy = (
     routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
-# TODO ensure solution got
+# Timeout if solution not found
 search_parameters.time_limit.seconds = 10
 
 
@@ -26,21 +26,21 @@ def _create_routing_model(distance_matrix: np.ndarray, manager: pywrapcp.Routing
     
     # setting cost as distance (routing will attempt to minimise this cost)
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
-
+    
     # Add Distance constraint.
     if include_distance_dim:
         dimension_name = 'Distance'
         routing.AddDimension(
             transit_callback_index,
-            0,  # no slack
-            3000,  # vehicle maximum travel distance 
+            7200,  # 2 hours slack
+            28800,  # max 8 hours
             True,  # start cumul to zero
             dimension_name)
         distance_dimension = routing.GetDimensionOrDie(dimension_name)
         distance_dimension.SetGlobalSpanCostCoefficient(100)
 
     # create pickup and delivery relationships
-    if pickup_delivery_data:
+    if pickup_delivery_data and include_distance_dim:
         for request in pickup_delivery_data:
             pickup_index = manager.NodeToIndex(request[0])
             delivery_index = manager.NodeToIndex(request[1])
@@ -72,7 +72,6 @@ def get_routes(distance_matrix: np.ndarray, n_vehicles: int, depot_node: int, pi
     """
     manager = _create_routing_manager(distance_matrix, n_vehicles, depot_node)
     model = _create_routing_model(distance_matrix, manager, pickup_delivery_data=pickup_delivery_data, include_distance_dim=n_vehicles > 1) # add distance dimension if more than 1 vehicle
-
     solution = model.SolveWithParameters(params)
 
     routes = []
@@ -88,5 +87,4 @@ def get_routes(distance_matrix: np.ndarray, n_vehicles: int, depot_node: int, pi
             index = solution.Value(model.NextVar(index))
             route.append(manager.IndexToNode(index))
         routes.append(route)
-
     return routes
