@@ -35,11 +35,11 @@ jobs:
       
       - name: Build
         run: |
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/demo:latest .
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/demo .
 
       - name: Push
         run: |
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/demo:latest
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/demo
 
       - name: Deploy
         run: |
@@ -48,4 +48,3 @@ jobs:
           --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/demo \
           --platform managed \
           --allow-unauthenticated \
-          --project ${{ secrets.GCP_PROJECT_ID }}
