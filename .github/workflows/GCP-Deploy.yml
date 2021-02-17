@@ -35,17 +35,17 @@ jobs:
       
       - name: Build
         run: |
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/deliveryapi:latest .
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/demo:latest .
 
       - name: Push
         run: |
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/deliveryapi:latest
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/demo:latest
 
       - name: Deploy
         run: |
-          gcloud run deploy deliveryapi \
+          gcloud run deploy demo \
           --region europe-west1 \
-          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/deliveryapi \
+          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/demo \
           --platform managed \
           --allow-unauthenticated \
           --project ${{ secrets.GCP_PROJECT_ID }}
