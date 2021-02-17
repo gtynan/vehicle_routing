@@ -1,15 +1,13 @@
-FROM python:3.9-slim
+FROM python:3.7
 
-# Allow statements and log messages to immediately appear in the Knative logs
-ENV PYTHONUNBUFFERED True
+RUN pip install poetry 
 
-RUN pip install poetry
-
-COPY poetry.lock .
 COPY pyproject.toml .
 
 RUN poetry install
 
+EXPOSE ${PORT}
+
 COPY . .
 
-CMD poetry run gunicorn --bind :$PORT src.api.server:app -w 1 -k uvicorn.workers.UvicornWorker
+CMD poetry run uvicorn src.api.server:app --host 0.0.0.0 --port $PORT
