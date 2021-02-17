@@ -12,6 +12,4 @@ RUN poetry install
 
 COPY . .
 
-ENV PORT=8080
-
-CMD poetry run uvicorn src.api.server:app --reload --port $PORT
+CMD poetry run gunicorn --bind :$PORT src.api.server:app -w 1 -k uvicorn.workers.UvicornWorker
