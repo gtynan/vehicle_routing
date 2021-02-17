@@ -9,5 +9,5 @@ RUN poetry install
 COPY . .
 
 
-CMD poetry run gunicorn --bind :$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker src.api.server:app
+CMD poetry run gunicorn --bind 8080 --workers 1 --worker-class uvicorn.workers.UvicornWorker src.api.server:app
 
