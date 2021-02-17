@@ -14,7 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     env: 
       API_KEY: ${{ secrets.API_KEY }}
-      PORT: ${{ secrets.PORT }}
 
     steps:
 
