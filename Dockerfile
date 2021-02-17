@@ -1,5 +1,8 @@
 FROM python:3.9-slim
 
+# Allow statements and log messages to immediately appear in the Knative logs
+ENV PYTHONUNBUFFERED True
+
 RUN pip install poetry
 
 COPY poetry.lock .
@@ -9,6 +12,4 @@ RUN poetry install
 
 COPY . .
 
-EXPOSE 8000
-
-CMD [ "poetry", "run",  "uvicorn", "src.api.server:app", "--reload", "--workers", "1", "--host",  "0.0.0.0", "--port", "8000" ]
+CMD exec gunicorn --bind :$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker  --threads 8 src.api.server:app
