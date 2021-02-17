@@ -10,4 +10,4 @@ EXPOSE ${PORT}
 
 COPY . .
 
-CMD poetry run uvicorn src.api.server:app --host 0.0.0.0 --port $PORT
+CMD poetry run gunicorn --bind :$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker src.api.server:app
