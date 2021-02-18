@@ -14,6 +14,7 @@ def dummy_locations():
         (52.67862, -6.39381)
     ]
 
+
 def test_get_distance_matrix(dummy_locations):
     matrix = get_distance_matrix(dummy_locations[0])
     n = len(matrix)
