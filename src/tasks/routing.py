@@ -1,25 +1,35 @@
 from typing import List, Optional
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
-import numpy as np
 
-search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-search_parameters.first_solution_strategy = (
+
+# default search params
+SEARCH_PARAMS = pywrapcp.DefaultRoutingSearchParameters()
+SEARCH_PARAMS.first_solution_strategy = (
     routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
 # Timeout if solution not found
-search_parameters.time_limit.seconds = 10
+SEARCH_PARAMS.time_limit.seconds = 10
 
 
-def _create_routing_manager(distance_matrix: np.ndarray, n_vehicles: int, depot_node: int):
-    return pywrapcp.RoutingIndexManager(len(distance_matrix), n_vehicles, depot_node)
+def _create_routing_manager(n_locations: int, n_vehicles: int, depot_node: int):
+    return pywrapcp.RoutingIndexManager(n_locations, n_vehicles, depot_node)
 
 
-def _create_routing_model(distance_matrix: np.ndarray, manager: pywrapcp.RoutingIndexManager, pickup_delivery_data: Optional[List] = None, include_distance_dim: bool = False) -> pywrapcp.RoutingModel:
+def _create_routing_model(distance_matrix: List[List[int]], 
+                          manager: pywrapcp.RoutingIndexManager, 
+                          pickup_delivery_data: Optional[List] = None, 
+                          max_distance: Optional[int] = None) -> pywrapcp.RoutingModel:
+   
     def distance_callback(from_index: int, to_index: int) -> float:
         """Calculates distance between two indicies
         """
         from_node = manager.IndexToNode(from_index)
         to_node = manager.IndexToNode(to_index)
         return distance_matrix[from_node][to_node]
+
+    # must specify max distance if more than 1 vehicle
+    distance_constraint = manager.GetNumberOfVehicles() > 1
+    if distance_constraint:
+        assert isinstance(max_distance, int)
 
     routing = pywrapcp.RoutingModel(manager)
     transit_callback_index = routing.RegisterTransitCallback(distance_callback)
@@ -28,19 +38,19 @@ def _create_routing_model(distance_matrix: np.ndarray, manager: pywrapcp.Routing
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
     
     # Add Distance constraint.
-    if include_distance_dim:
+    if distance_constraint:
         dimension_name = 'Distance'
         routing.AddDimension(
             transit_callback_index,
-            7200,  # 2 hours slack
-            28800,  # max 8 hours
+            0,  # No slack
+            max_distance,
             True,  # start cumul to zero
             dimension_name)
         distance_dimension = routing.GetDimensionOrDie(dimension_name)
         distance_dimension.SetGlobalSpanCostCoefficient(100)
 
     # create pickup and delivery relationships
-    if pickup_delivery_data and include_distance_dim:
+    if pickup_delivery_data and distance_constraint:
         for request in pickup_delivery_data:
             pickup_index = manager.NodeToIndex(request[0])
             delivery_index = manager.NodeToIndex(request[1])
@@ -58,7 +68,12 @@ def _create_routing_model(distance_matrix: np.ndarray, manager: pywrapcp.Routing
     return routing
 
 
-def get_routes(distance_matrix: np.ndarray, n_vehicles: int, depot_node: int, pickup_delivery_data: Optional[List] = None, params: pywrapcp.DefaultRoutingSearchParameters = search_parameters) -> List[int]:
+def get_routes(distance_matrix: List[List[int]], 
+               n_vehicles: int, 
+               depot_node: int, 
+               pickup_delivery_data: Optional[List] = None, 
+               max_distance: int = 28800,
+               params: pywrapcp.DefaultRoutingSearchParameters = SEARCH_PARAMS) -> List[int]:
     """Create optimal route path in a 2 dimensional array. Value i, j refers to vehicles i's jth location to visit
 
     Args:
@@ -70,8 +85,8 @@ def get_routes(distance_matrix: np.ndarray, n_vehicles: int, depot_node: int, pi
     Returns:
         List[int]: 2 dimensional array of routes for each vehicle
     """
-    manager = _create_routing_manager(distance_matrix, n_vehicles, depot_node)
-    model = _create_routing_model(distance_matrix, manager, pickup_delivery_data=pickup_delivery_data, include_distance_dim=n_vehicles > 1) # add distance dimension if more than 1 vehicle
+    manager = _create_routing_manager(len(distance_matrix), n_vehicles, depot_node)
+    model = _create_routing_model(distance_matrix, manager, pickup_delivery_data=pickup_delivery_data, max_distance=max_distance) # add distance dimension if more than 1 vehicle
     solution = model.SolveWithParameters(params)
 
     routes = []

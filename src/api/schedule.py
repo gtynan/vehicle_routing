@@ -32,7 +32,6 @@ def create_schedule(
     routes = get_routes(n_vehicles=n_vehicles, depot_node=depot_node, distance_matrix=distance_matrix, pickup_delivery_data=pickup_delivery)
     if routes is None:
         raise HTTPException(status_code=422, detail="Could not converge on optimal route within specified constraints")
-    print(location_names)
     return [Schedule.from_raw(driver_id=i, 
                               route=routes[i], 
                               distance_matrix=distance_matrix, 
