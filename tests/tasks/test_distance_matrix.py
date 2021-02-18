@@ -1,42 +1,60 @@
+from numpy.core.numeric import full
 import pytest
+import numpy as np
 
 from src.tasks.distance_matrix import get_distance_matrix, _build_distance_matrix, _send_request
 
 
-@pytest.fixture(scope='module')
-def dummy_locations():
-    # str and coord addresses for same places
-    return [
+@pytest.mark.expensive
+def test_get_distance_matrix():
+    # 11 locations to ensure multiple requests must be sent
+    locations = [
+        "GAFFNEY CAR SALES, DELVIN, CO. WESTMEATH",
+        "Marrowbone Lane, Saint Catherine's, Dublin, Ireland",
+        "Cartow Vehicle Serivce, Finglas North, Dublin, Ireland", 
+        "VTN - West Auto Electric, Gortboy, Newcastle West, County Limerick, Ireland",
+        "12 Ashling Heights, Corduff, Dublin 15, Ireland",
+        "ALDI, Blackrock Avenue, Mahon, Cork, Ireland",
+        "Renault Belgard Dublin, Belgard Road, Tallaght, Dublin 24, Ireland",
+        "19 Charnwood Meadows, Clonsilla, Dublin, Ireland",
+        "Coco nut, Long Mile Road, Walkinstown, Dublin, Ireland",
+        "122 Castlecurragh Vale, Buzzardstown, Dublin 15, Ireland", 
+        "47 Castleknock Rise, Blanchardstown, Dublin 15, Ireland"
+    ]
+
+    full_matrix = np.array(get_distance_matrix(locations))
+    sub_matrix = np.array(get_distance_matrix(locations[:3]))
+
+    # ensure full matrix has matching sub matrix
+    np.testing.assert_array_equal(full_matrix[:3, :3], sub_matrix)
+
+    assert len(full_matrix) == len(locations)
+    assert all(full_matrix.diagonal() == 0)
+    # ensure all off diagonal greate than 0
+    # eye returns a k * k matrix with 1's on the diagonal
+    assert all(full_matrix[~np.eye(len(full_matrix), dtype=bool)] > 0)
+
+
+@pytest.mark.expensive
+def test_send_request():
+    str_locations = [
         'Cartow Vehicle Serivce, Finglas North, Dublin, Ireland', 
         'Island Upper, County Wexford, Y25 A344, Ireland'
-    ], [
+    ]
+    coord_locations = [
         (53.39868, -6.29710),
         (52.67862, -6.39381)
     ]
 
-
-def test_get_distance_matrix(dummy_locations):
-    matrix = get_distance_matrix(dummy_locations[0])
-    n = len(matrix)
-    assert n == len(dummy_locations[0])
-
-    for i in range(n):
-        for j in range(n):
-            if i == j:
-                assert matrix[i][j] == 0 # diagonal should always be 0 
-            else:
-                assert matrix[i][j] > 0
-
-
-def test_send_request(dummy_locations):
-    location_response = _send_request(dummy_locations[0], dummy_locations[0], coordinates=False)
+    location_response = _send_request(str_locations, str_locations, coordinates=False)
     location_response = _build_distance_matrix(location_response, measure="duration")
 
-    coord_response = _send_request(dummy_locations[1], dummy_locations[1], coordinates=True)
+    coord_response = _send_request(coord_locations, coord_locations, coordinates=True)
     coord_response = _build_distance_matrix(coord_response, measure="duration")
 
-    # if measure used was distance would fail due to slight diff in coord vs locations
-    assert location_response == coord_response
+    # coord and location not exactly equal so ensure ~equal
+    precision_diff = (np.array(location_response) + 1) / (np.array(coord_response) + 1) # add 1 to ensure no nans on diagonal
+    np.testing.assert_almost_equal(precision_diff, 1)
 
 
 def test_build_distance_matrix():

@@ -89,17 +89,19 @@ def get_routes(distance_matrix: List[List[int]],
     model = _create_routing_model(distance_matrix, manager, pickup_delivery_data=pickup_delivery_data, max_distance=max_distance) # add distance dimension if more than 1 vehicle
     solution = model.SolveWithParameters(params)
 
-    routes = []
-    for route_nbr in range(model.vehicles()):
-        # starting index
-        index = model.Start(route_nbr)
-        # overall route for this specific vehicle
-        route = [manager.IndexToNode(index)]
+    # create route if optimal solution found
+    if solution:
+        routes = []
+        for route_nbr in range(model.vehicles()):
+            # starting index
+            index = model.Start(route_nbr)
+            # overall route for this specific vehicle
+            route = [manager.IndexToNode(index)]
 
-        # append to route while not at final indedx
-        while not model.IsEnd(index):
-            # next index to visit
-            index = solution.Value(model.NextVar(index))
-            route.append(manager.IndexToNode(index))
-        routes.append(route)
-    return routes
+            # append to route while not at final indedx
+            while not model.IsEnd(index):
+                # next index to visit
+                index = solution.Value(model.NextVar(index))
+                route.append(manager.IndexToNode(index))
+            routes.append(route)
+        return routes
