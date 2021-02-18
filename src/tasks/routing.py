@@ -17,7 +17,8 @@ def _create_routing_manager(n_locations: int, n_vehicles: int, depot_node: int):
 def _create_routing_model(distance_matrix: List[List[int]], 
                           manager: pywrapcp.RoutingIndexManager, 
                           pickup_delivery_data: Optional[List] = None, 
-                          max_distance: Optional[int] = None) -> pywrapcp.RoutingModel:
+                          max_distance: Optional[int] = None,
+                          deliver_immediately: bool = False) -> pywrapcp.RoutingModel:
    
     def distance_callback(from_index: int, to_index: int) -> float:
         """Calculates distance between two indicies
@@ -51,19 +52,29 @@ def _create_routing_model(distance_matrix: List[List[int]],
 
     # create pickup and delivery relationships
     if pickup_delivery_data and distance_constraint:
+
         for request in pickup_delivery_data:
             pickup_index = manager.NodeToIndex(request[0])
             delivery_index = manager.NodeToIndex(request[1])
+
             # pick up delievry request
             routing.AddPickupAndDelivery(pickup_index, delivery_index)
+
             # constrain that same vehicle must both pick up and deliver
             routing.solver().Add(
                 routing.VehicleVar(pickup_index) == routing.VehicleVar(
                     delivery_index))
+
             # contraint pickup must occur before delivery
             routing.solver().Add(
                 distance_dimension.CumulVar(pickup_index) <=
                 distance_dimension.CumulVar(delivery_index))
+
+            if deliver_immediately:
+                # constraint pickup vehicle must go straight to delivery
+                routing.solver().Add(
+                    routing.NextVar(pickup_index) == delivery_index
+                )
 
     return routing
 
@@ -73,6 +84,7 @@ def get_routes(distance_matrix: List[List[int]],
                depot_node: int, 
                pickup_delivery_data: Optional[List] = None, 
                max_distance: int = 28800,
+               deliver_immediately: bool = False,
                params: pywrapcp.DefaultRoutingSearchParameters = SEARCH_PARAMS) -> List[int]:
     """Create optimal route path in a 2 dimensional array. Value i, j refers to vehicles i's jth location to visit
 
@@ -86,7 +98,7 @@ def get_routes(distance_matrix: List[List[int]],
         List[int]: 2 dimensional array of routes for each vehicle
     """
     manager = _create_routing_manager(len(distance_matrix), n_vehicles, depot_node)
-    model = _create_routing_model(distance_matrix, manager, pickup_delivery_data=pickup_delivery_data, max_distance=max_distance) # add distance dimension if more than 1 vehicle
+    model = _create_routing_model(distance_matrix, manager, pickup_delivery_data=pickup_delivery_data, max_distance=max_distance, deliver_immediately=deliver_immediately) # add distance dimension if more than 1 vehicle
     solution = model.SolveWithParameters(params)
 
     # create route if optimal solution found
