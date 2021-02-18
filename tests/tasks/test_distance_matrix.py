@@ -37,6 +37,7 @@ def test_send_request(dummy_locations):
     # if measure used was distance would fail due to slight diff in coord vs locations
     assert location_response == coord_response
 
+
 def test_build_distance_matrix():
     # dummy json that matches whats expected from google
     dummy_json = {
