@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 import requests
 
 from src.core.config import API_KEY, API_ADDRESS
@@ -39,14 +39,26 @@ def get_distance_matrix(locations: List[str]) -> List[List[int]]:
     return distance_matrix
 
 
-def _send_request(origin_addresses, dest_addresses):
-    """Build and send request for the given origin and destination addresses.
+def _send_request(origin_addresses: List[Any], dest_addresses: List[Any], coordinates: bool = False) -> dict:
+    """Build and send request for the given origin and destination addresses. 
+
+    Args:
+        origin_addresses (List[Any]): Can be str addresses or tuples of coordinates
+        dest_addresses (List[Any]): Can be str addresses or tuples of coordinates
+        coordinates (bool): flags whether lat long tuples passed or address strings
+    
+    Returns:
+        dict: request json data
     """
     def build_address_str(addresses):
         return "|".join(addresses) # Build a pipe-separated string of addresses
 
-    origin_address_str = build_address_str(origin_addresses)
-    dest_address_str = build_address_str(dest_addresses)
+    def build_coord_str(addresses):
+        # must pre format if latitude and long such that each entry = "lat, long"
+        return build_address_str([f"{lat}, {lon}" for lat, lon in addresses])
+
+    origin_address_str = build_coord_str(origin_addresses) if coordinates else build_address_str(origin_addresses)
+    dest_address_str = build_coord_str(dest_addresses) if coordinates else build_address_str(dest_addresses)
 
     # API request
     res = requests.get(
@@ -61,12 +73,20 @@ def _send_request(origin_addresses, dest_addresses):
     return res.json()
 
 
-def _build_distance_matrix(res_json):
+def _build_distance_matrix(res_json: dict, measure: str = "duration") -> List[List[int]]:
     """Create distance matrix from json
+    
+    Args:
+        measure (str): Either duration or distance. Defaults to duration
+
+    Returns:
+        List[List[int]]: Distance matrix
     """
+    # only two allowed measures
+    assert measure in ['distance', 'duration']
+
     distance_matrix = []
     for row in res_json['rows']:
-        # distance can also be duration to handle time
-        row_list = [row['elements'][j]['duration']['value'] for j in range(len(row['elements']))]
+        row_list = [row['elements'][j][measure]['value'] for j in range(len(row['elements']))]
         distance_matrix.append(row_list)
     return distance_matrix
