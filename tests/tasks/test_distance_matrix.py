@@ -1,4 +1,3 @@
-from numpy.core.numeric import full
 import pytest
 import numpy as np
 
