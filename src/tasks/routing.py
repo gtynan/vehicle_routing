@@ -30,17 +30,18 @@ class Router:
         time_worked: Optional[List[int]] = None,
         max_time: int = 28800,
     ) -> None:
-
         n_locations, n_vehicles = len(time_matrix), len(depot_nodes)
 
-        if vehicle_capacities:
-            assert n_vehicles == len(vehicle_capacities)
-        if site_eta:
-            assert n_locations == len(site_eta)
-        if delivery_weights:
-            assert len(delivery_weights) == len(delivery_pairs)
-        if time_worked:
-            assert len(time_worked) == n_vehicles
+        # ensure all inputs correct
+        _check_inputs(
+            n_locations,
+            n_vehicles,
+            vehicle_capacities,
+            site_eta,
+            delivery_weights,
+            delivery_pairs,
+            time_worked,
+        )
 
         # depot nodes act as start and end positions
         self.manager = pywrapcp.RoutingIndexManager(
@@ -211,3 +212,53 @@ class Router:
             True,  # start cumul to zero
             CAPACITY_DIMENSION,
         )
+
+
+def _check_inputs(
+    n_locations,
+    n_vehicles,
+    vehicle_capacities,
+    site_eta,
+    delivery_weights,
+    delivery_pairs,
+    time_worked,
+) -> None:
+    """Ensure all inputs correct"""
+    try:
+        assert n_vehicles > 0
+    except:
+        raise Exception("Must have at least 1 depot node")
+    try:
+        assert n_locations > 1
+    except:
+        raise Exception("Must have at least 2 locations")
+    if vehicle_capacities:
+        try:
+            assert n_vehicles == len(vehicle_capacities)
+        except:
+            raise Exception(
+                "len(vehicle_capacities) != len(depot_nodes), require capacity for each vehicle"
+            )
+    if site_eta:
+        try:
+            assert n_locations == len(site_eta)
+        except:
+            raise Exception(
+                "len(time_matrix) != len(site_eta), require site eta for all locations"
+            )
+
+    if delivery_weights:
+        try:
+            assert len(delivery_weights) == len(delivery_pairs)
+        except:
+            raise Exception(
+                "len(delivery_weights) != len(delivery_pairs), require delivery weights for all delivery pairs"
+            )
+
+    if time_worked:
+        try:
+            assert len(time_worked) == n_vehicles
+        except:
+            raise Exception(
+                "len(time_worked) != len(depot_nodes), require time worked for all vehicles"
+            )

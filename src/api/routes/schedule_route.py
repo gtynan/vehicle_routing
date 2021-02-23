@@ -1,9 +1,13 @@
+import logging
 from typing import List, Optional, Tuple
 from fastapi import APIRouter, HTTPException, Depends
 from starlette.status import HTTP_200_OK
 
 from src.models.schedule import Schedule
 from src.tasks.routing import Router
+
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/schedule")
@@ -31,7 +35,19 @@ def create_schedule(
     location_names: Optional[List[str]] = None,
     routing_model: Router = Depends(routing_model),
 ) -> List[Schedule]:
-
+    # log all inputs
+    logger.info(
+        f"""Inputs:
+        time_matrix: {time_matrix}, 
+        depot_nodes: {depot_nodes}, 
+        delivery_pairs: {delivery_pairs}, 
+        delivery_weights: {delivery_weights}, 
+        vehicle_capacities: {vehicle_capacities}, 
+        site_eta: {site_eta}, 
+        time_worked: {time_worked}
+        max_time: {max_time}
+        location_names: {location_names}"""
+    )
     try:
         routing_model.solve(
             time_matrix=time_matrix,
@@ -43,7 +59,6 @@ def create_schedule(
             time_worked=time_worked,
             max_time=max_time,
         )
-        print(routing_model)
         return [
             Schedule.from_raw(
                 driver_id=i,
@@ -55,8 +70,9 @@ def create_schedule(
                 zip(routing_model.get_route_list(), routing_model.get_route_times())
             )
         ]
-    except:
+    except Exception as e:
+        logger.error(str(e))
         raise HTTPException(
             status_code=422,
-            detail="Could not converge on optimal route within specified constraints",
+            detail=str(e),
         )

@@ -4,7 +4,7 @@ RUN pip install poetry
 
 COPY pyproject.toml .
 
-RUN poetry install
+RUN poetry install --no-dev
 
 COPY . .
 
