@@ -3,3 +3,5 @@ __pycache__
 .env
 .vscode
 .coverage
+.ipynb_checkpoints
+analysis.ipynb

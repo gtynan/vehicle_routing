@@ -9,17 +9,19 @@ from src.tasks.distance_matrix import get_distance_matrix
 router = APIRouter(prefix="/distance_matrix")
 
 
-@router.post("/create", response_model=DistanceMatrix, name="distance_matrix:create", status_code=HTTP_200_OK)
+@router.post(
+    "/create",
+    response_model=DistanceMatrix,
+    name="distance_matrix:create",
+    status_code=HTTP_200_OK,
+)
 def create_distance_matrix(
-    locations: List[str],
+    return_home: bool, location_names: List[str], driver_indicies: List[int]
 ) -> DistanceMatrix:
-    """Create a distance matrix for the specified locations
 
-    Args:
-        locations (List[str]): location names
-
-    Returns:
-        DistanceMatrix: locations specified and corresponding distance matrix
-    """
-    matrix = get_distance_matrix(locations)
-    return DistanceMatrix(locations=locations, matrix=matrix)
+    matrix = get_distance_matrix(
+        location_names, driver_indicies, return_home=return_home
+    )
+    return DistanceMatrix(
+        locations=location_names, driver_indicies=driver_indicies, matrix=matrix
+    )

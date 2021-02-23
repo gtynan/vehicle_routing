@@ -1,119 +1,213 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
+# dimension names
+TIME_DIMENSION = "Time"
+CAPACITY_DIMENSION = "Capacity"
 
 # default search params
 SEARCH_PARAMS = pywrapcp.DefaultRoutingSearchParameters()
 SEARCH_PARAMS.first_solution_strategy = (
-    routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
-# Timeout if solution not found
-SEARCH_PARAMS.time_limit.seconds = 10
+    routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+)
+SEARCH_PARAMS.time_limit.seconds = 10  # Timeout if solution not found
 
 
-def _create_routing_manager(n_locations: int, n_vehicles: int, depot_node: int):
-    return pywrapcp.RoutingIndexManager(n_locations, n_vehicles, depot_node)
+class Router:
+    def __init__(
+        self, params: pywrapcp.DefaultRoutingSearchParameters = SEARCH_PARAMS
+    ) -> None:
+        self.params = params
 
+    def solve(
+        self,
+        time_matrix: List[List[int]],
+        depot_nodes: List[int],
+        delivery_pairs: List[Tuple[int]],
+        delivery_weights: Optional[List[int]] = None,
+        vehicle_capacities: Optional[List[int]] = None,
+        site_eta: Optional[List[int]] = None,
+        time_worked: Optional[List[int]] = None,
+        max_time: int = 28800,
+    ) -> None:
 
-def _create_routing_model(distance_matrix: List[List[int]], 
-                          manager: pywrapcp.RoutingIndexManager, 
-                          pickup_delivery_data: Optional[List] = None, 
-                          max_distance: Optional[int] = None,
-                          deliver_immediately: bool = False) -> pywrapcp.RoutingModel:
-   
-    def distance_callback(from_index: int, to_index: int) -> float:
-        """Calculates distance between two indicies
-        """
-        from_node = manager.IndexToNode(from_index)
-        to_node = manager.IndexToNode(to_index)
-        return distance_matrix[from_node][to_node]
+        n_locations, n_vehicles = len(time_matrix), len(depot_nodes)
 
-    # must specify max distance if more than 1 vehicle
-    distance_constraint = manager.GetNumberOfVehicles() > 1
-    if distance_constraint:
-        assert isinstance(max_distance, int)
+        if vehicle_capacities:
+            assert n_vehicles == len(vehicle_capacities)
+        if site_eta:
+            assert n_locations == len(site_eta)
+        if delivery_weights:
+            assert len(delivery_weights) == len(delivery_pairs)
+        if time_worked:
+            assert len(time_worked) == n_vehicles
 
-    routing = pywrapcp.RoutingModel(manager)
-    transit_callback_index = routing.RegisterTransitCallback(distance_callback)
-    
-    # setting cost as distance (routing will attempt to minimise this cost)
-    routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
-    
-    # Add Distance constraint.
-    if distance_constraint:
-        dimension_name = 'Distance'
-        routing.AddDimension(
-            transit_callback_index,
-            0,  # No slack
-            max_distance,
-            True,  # start cumul to zero
-            dimension_name)
-        distance_dimension = routing.GetDimensionOrDie(dimension_name)
-        distance_dimension.SetGlobalSpanCostCoefficient(100)
+        # depot nodes act as start and end positions
+        self.manager = pywrapcp.RoutingIndexManager(
+            n_locations, n_vehicles, depot_nodes, depot_nodes
+        )
+        self.routing = pywrapcp.RoutingModel(self.manager)
 
-    # create pickup and delivery relationships
-    if pickup_delivery_data and distance_constraint:
+        self._add_time_dimension(time_matrix, max_time, site_eta, time_worked)
+        self._add_delivery_constraint(delivery_pairs)
 
-        for request in pickup_delivery_data:
-            pickup_index = manager.NodeToIndex(request[0])
-            delivery_index = manager.NodeToIndex(request[1])
+        # only add capacity constraint if needed
+        if delivery_weights and vehicle_capacities:
+            self._add_capacity_dimension(
+                n_locations,
+                delivery_weights,
+                delivery_pairs,
+                vehicle_capacities,
+                depot_nodes,
+            )
 
-            # pick up delievry request
-            routing.AddPickupAndDelivery(pickup_index, delivery_index)
+        self.solution = self.routing.SolveWithParameters(self.params)
+        if self.solution is None:
+            raise Exception("Solution not found")
 
-            # constrain that same vehicle must both pick up and deliver
-            routing.solver().Add(
-                routing.VehicleVar(pickup_index) == routing.VehicleVar(
-                    delivery_index))
-
-            # contraint pickup must occur before delivery
-            routing.solver().Add(
-                distance_dimension.CumulVar(pickup_index) <=
-                distance_dimension.CumulVar(delivery_index))
-
-            if deliver_immediately:
-                # constraint pickup vehicle must go straight to delivery
-                routing.solver().Add(
-                    routing.NextVar(pickup_index) == delivery_index
-                )
-
-    return routing
-
-
-def get_routes(distance_matrix: List[List[int]], 
-               n_vehicles: int, 
-               depot_node: int, 
-               pickup_delivery_data: Optional[List] = None, 
-               max_distance: int = 28800,
-               deliver_immediately: bool = False,
-               params: pywrapcp.DefaultRoutingSearchParameters = SEARCH_PARAMS) -> List[int]:
-    """Create optimal route path in a 2 dimensional array. Value i, j refers to vehicles i's jth location to visit
-
-    Args:
-        distance_matrix (np.ndarray): Distances between all locations
-        n_vehicles (int): Number of vehicles available
-        depot_node (int): Starting node
-        params (pywrapcp.DefaultRoutingSearchParameters, optional): [description]. Defaults to search_parameters.
-
-    Returns:
-        List[int]: 2 dimensional array of routes for each vehicle
-    """
-    manager = _create_routing_manager(len(distance_matrix), n_vehicles, depot_node)
-    model = _create_routing_model(distance_matrix, manager, pickup_delivery_data=pickup_delivery_data, max_distance=max_distance, deliver_immediately=deliver_immediately) # add distance dimension if more than 1 vehicle
-    solution = model.SolveWithParameters(params)
-
-    # create route if optimal solution found
-    if solution:
+    def get_route_list(self):
         routes = []
-        for route_nbr in range(model.vehicles()):
+        for vehicle_id in range(self.manager.GetNumberOfVehicles()):
             # starting index
-            index = model.Start(route_nbr)
+            index = self.routing.Start(vehicle_id)
             # overall route for this specific vehicle
-            route = [manager.IndexToNode(index)]
+            route = [self.manager.IndexToNode(index)]
 
             # append to route while not at final indedx
-            while not model.IsEnd(index):
+            while not self.routing.IsEnd(index):
                 # next index to visit
-                index = solution.Value(model.NextVar(index))
-                route.append(manager.IndexToNode(index))
+                index = self.solution.Value(self.routing.NextVar(index))
+                route.append(self.manager.IndexToNode(index))
             routes.append(route)
         return routes
+
+    def get_route_times(self):
+        time_dimension = self.routing.GetDimensionOrDie(TIME_DIMENSION)
+        times = []
+        for vehicle_id in range(self.manager.GetNumberOfVehicles()):
+            index = self.routing.Start(vehicle_id)
+            vehicle_time = []
+            while not self.routing.IsEnd(index):
+                vehicle_time.append(self.solution.Min(time_dimension.CumulVar(index)))
+                index = self.solution.Value(self.routing.NextVar(index))
+
+            vehicle_time.append(self.solution.Min(time_dimension.CumulVar(index)))
+            times.append(vehicle_time)
+        return times
+
+    def _add_time_dimension(
+        self,
+        time_matrix: List[List[int]],
+        max_time: int,
+        site_eta: Optional[List[int]] = None,
+        time_worked: Optional[List[int]] = None,
+    ) -> None:
+        def time_callback(from_index: int, to_index: int) -> float:
+            """Calculates time between two indicies"""
+            from_node = self.manager.IndexToNode(from_index)
+            to_node = self.manager.IndexToNode(to_index)
+
+            travel_time = time_matrix[from_node][to_node]
+            if site_eta:
+                travel_time += site_eta[from_node]
+            return travel_time
+
+        transit_callback_index = self.routing.RegisterTransitCallback(time_callback)
+
+        # setting cost as time (routing will attempt to minimise this cost)
+        self.routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+
+        self.routing.AddDimension(
+            transit_callback_index,
+            0,  # no slack
+            max_time,  # maximum time per vehicle
+            False,  # Don't force start cumul to zero.
+            TIME_DIMENSION,
+        )
+
+        time_dimension = self.routing.GetDimensionOrDie(TIME_DIMENSION)
+
+        # force each vehicle to start at time 0 otherwise optimiser will adjust start times to minimise overall diff between lowest start and biggest end
+        for vehicle_id in range(self.manager.GetNumberOfVehicles()):
+            index = self.routing.Start(vehicle_id)
+            # we can specify how long already certain drivers have worked
+            starting_value = time_worked[vehicle_id] if time_worked else 0
+            time_dimension.CumulVar(index).SetValue(starting_value)
+
+        # minimises: coefficient * (Max(dimension end value) - Min(dimension start value)).
+        time_dimension.SetGlobalSpanCostCoefficient(100)
+
+        return time_dimension
+
+    def _add_delivery_constraint(
+        self,
+        pickup_delivery_data: List[List[int]],
+    ) -> None:
+        time_dimension = self.routing.GetDimensionOrDie(TIME_DIMENSION)
+
+        # set rules for pickup and delivery relationships
+        for pickup_node, delivery_node in pickup_delivery_data:
+
+            # all nodes are automatically visted so only set a delivery constraint if required
+            if pickup_node != delivery_node:
+
+                pickup_index = self.manager.NodeToIndex(pickup_node)
+                delivery_index = self.manager.NodeToIndex(delivery_node)
+
+                # pick up delivery request
+                self.routing.AddPickupAndDelivery(pickup_index, delivery_index)
+
+                # same vehicle must both pick up and deliver
+                self.routing.solver().Add(
+                    self.routing.VehicleVar(pickup_index)
+                    == self.routing.VehicleVar(delivery_index)
+                )
+
+                # contraint pickup must occur before delivery
+                self.routing.solver().Add(
+                    time_dimension.CumulVar(pickup_index)
+                    <= time_dimension.CumulVar(delivery_index)
+                )
+
+                # constraint pickup vehicle must go straight to delivery
+                self.routing.solver().Add(
+                    self.routing.NextVar(pickup_index) == delivery_index
+                )
+
+    def _add_capacity_dimension(
+        self,
+        n_locations: int,
+        requirements: List[int],
+        delivery_pairs: List[int],
+        capacities: List[int],
+        depot_nodes: List[int],
+    ) -> None:
+        def demand_callback(from_index):
+            """Returns the demand of the node."""
+
+            def get_flat_requirements():
+                """Flat list of weight requirements for each node"""
+                reqs = [0] * n_locations
+                for req, (pickup, delivery) in zip(requirements, delivery_pairs):
+                    if pickup != delivery:
+                        reqs[pickup] = req
+                        reqs[delivery] = -req
+                return reqs
+
+            from_node = self.manager.IndexToNode(from_index)
+            if from_node in depot_nodes:
+                # nothing is carried from depots
+                return 0
+            return get_flat_requirements()[from_node]
+
+        demand_callback_index = self.routing.RegisterUnaryTransitCallback(
+            demand_callback
+        )
+
+        self.routing.AddDimensionWithVehicleCapacity(
+            demand_callback_index,
+            0,  # null capacity slack
+            capacities,  # vehicle maximum capacities
+            True,  # start cumul to zero
+            CAPACITY_DIMENSION,
+        )
