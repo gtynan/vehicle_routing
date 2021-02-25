@@ -5,7 +5,7 @@ import string
 from fastapi import FastAPI
 from starlette.requests import Request
 from src.api.routes.schedule_route import router as schedule_router
-from src.api.routes.distance_route import router as distance_router
+from src.api.routes.time_route import router as time_router
 
 # setup loggers
 logging.config.fileConfig("logging.conf", disable_existing_loggers=False)
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 app = FastAPI(title="Pickup/Delivery POC")
-app.include_router(distance_router)
+app.include_router(time_router)
 app.include_router(schedule_router)
 
 
