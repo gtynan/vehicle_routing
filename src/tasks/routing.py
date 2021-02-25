@@ -22,7 +22,7 @@ class Router:
     def solve(
         self,
         time_matrix: List[List[int]],
-        depot_nodes: List[int],
+        driver_indicies: List[int],
         delivery_pairs: List[Tuple[int]],
         delivery_weights: Optional[List[int]] = None,
         vehicle_capacities: Optional[List[int]] = None,
@@ -30,7 +30,8 @@ class Router:
         time_worked: Optional[List[int]] = None,
         max_time: int = 28800,
     ) -> None:
-        n_locations, n_vehicles = len(time_matrix), len(depot_nodes)
+        """Attempt to find a solution within the given constraints, will raise exception if fails"""
+        n_locations, n_vehicles = len(time_matrix), len(driver_indicies)
 
         # ensure all inputs correct
         _check_inputs(
@@ -45,7 +46,7 @@ class Router:
 
         # depot nodes act as start and end positions
         self.manager = pywrapcp.RoutingIndexManager(
-            n_locations, n_vehicles, depot_nodes, depot_nodes
+            n_locations, n_vehicles, driver_indicies, driver_indicies
         )
         self.routing = pywrapcp.RoutingModel(self.manager)
 
@@ -59,7 +60,7 @@ class Router:
                 delivery_weights,
                 delivery_pairs,
                 vehicle_capacities,
-                depot_nodes,
+                driver_indicies,
             )
 
         self.solution = self.routing.SolveWithParameters(self.params)
@@ -67,6 +68,7 @@ class Router:
             raise Exception("Solution not found")
 
     def get_route_list(self):
+        """Get list of routes for each driver, locations are given as indicies relating to their position in the time matrix"""
         routes = []
         for vehicle_id in range(self.manager.GetNumberOfVehicles()):
             # starting index
@@ -83,6 +85,7 @@ class Router:
         return routes
 
     def get_route_times(self):
+        """Get expected duration of each route, value represents duration already incurred + current duration"""
         time_dimension = self.routing.GetDimensionOrDie(TIME_DIMENSION)
         times = []
         for vehicle_id in range(self.manager.GetNumberOfVehicles()):
@@ -181,7 +184,7 @@ class Router:
         requirements: List[int],
         delivery_pairs: List[int],
         capacities: List[int],
-        depot_nodes: List[int],
+        driver_indicies: List[int],
     ) -> None:
         def demand_callback(from_index):
             """Returns the demand of the node."""
@@ -196,7 +199,7 @@ class Router:
                 return reqs
 
             from_node = self.manager.IndexToNode(from_index)
-            if from_node in depot_nodes:
+            if from_node in driver_indicies:
                 # nothing is carried from depots
                 return 0
             return get_flat_requirements()[from_node]
