@@ -1,4 +1,5 @@
 from typing import List, Optional
+from datetime import datetime, timedelta
 
 from src.models.base import BaseModel
 from src.models.driver import Driver
@@ -28,6 +29,11 @@ class Schedule(BaseModel):
                     name=locations[route[i + 1]] if locations else str(route[i + 1])
                 ),
                 duration=time[i + 1] - time[i],
+                arrival_time=(
+                    datetime.now()
+                    + timedelta(seconds=time[i + 1])
+                    - timedelta(seconds=time[0])  # remove starting load from time calc
+                ).time(),
             )
             for i in range(len(route) - 1)
         ]
