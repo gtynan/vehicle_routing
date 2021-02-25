@@ -4,7 +4,7 @@ RUN pip install poetry
 
 WORKDIR /app
 
-ENV API_KEY :$API_KEY
+ENV API_KEY $API_KEY
 
 COPY pyproject.toml .
 
