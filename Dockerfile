@@ -6,6 +6,7 @@ WORKDIR /app
 
 COPY pyproject.toml .
 
+# dont create virtual env install directly instead
 RUN poetry config virtualenvs.create false && \
     poetry install -v --no-interaction --no-ansi --no-dev
 
