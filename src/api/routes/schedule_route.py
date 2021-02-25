@@ -54,7 +54,7 @@ def create_schedule(
 
     # log all inputs
     logger.info(
-        f"""Inputs:
+        f"""INPUTS:
         time_matrix: {time_matrix}, 
         driver_indicies: {driver_indicies}, 
         delivery_pairs: {delivery_pairs}, 
