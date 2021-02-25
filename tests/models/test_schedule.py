@@ -1,4 +1,5 @@
 from src.models.schedule import Schedule
+from datetime import datetime, timedelta, date
 
 
 class TestSchedule:
@@ -21,3 +22,8 @@ class TestSchedule:
         assert schedule.route[2].duration == 10
         assert schedule.route[2].start.name == "2"
         assert schedule.route[2].end.name == "0"
+
+        # comparing final arrival time with expected
+        expected_date = datetime.now() + timedelta(seconds=time[-1])
+        actual_date = datetime.combine(date.today(), schedule.route[-1].arrival_time)
+        assert abs(expected_date - actual_date < timedelta(seconds=2))

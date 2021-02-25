@@ -25,7 +25,7 @@ class TestScheduleRoute:
             {
                 "time_matrix": mv_distance_matrix,
                 "delivery_pairs": pickup_deliver,
-                "depot_nodes": [0] * 4,
+                "driver_indicies": [0] * 4,
             }
         )
         res = await client.post(
@@ -39,7 +39,7 @@ class TestScheduleRoute:
             {
                 "time_matrix": (np.array(mv_distance_matrix) * 10000).tolist(),
                 "delivery_pairs": pickup_deliver,
-                "depot_nodes": [0] * 4,
+                "driver_indicies": [0] * 4,
             }
         )
         res = await client.post(

@@ -24,7 +24,7 @@ class TestRouter:
         router = Router(params)
         router.solve(
             time_matrix=mv_distance_matrix,
-            depot_nodes=[0] * 4,  # all drivers depart from node 0
+            driver_indicies=[0] * 4,  # all drivers depart from node 0
             delivery_pairs=pickup_deliver,
         )
         router.get_route_list() == expected_routes
@@ -34,7 +34,7 @@ class TestRouter:
             router.solve(
                 time_matrix=mv_distance_matrix,
                 delivery_pairs=pickup_deliver,
-                depot_nodes=[0] * 4,
+                driver_indicies=[0] * 4,
                 max_time=0,
             )
 
@@ -45,7 +45,7 @@ class TestRouter:
         router = Router()
         router.solve(
             time_matrix=matrix,
-            depot_nodes=[0] * 3,
+            driver_indicies=[0] * 3,
             delivery_pairs=[(1, 2), (3, 4), (5, 6)],
             delivery_weights=[1, 2, 2],
             vehicle_capacities=[0, 1, 2],
@@ -65,7 +65,7 @@ class TestRouter:
         router = Router()
         router.solve(
             time_matrix=matrix,
-            depot_nodes=[0, 7, 8],
+            driver_indicies=[0, 7, 8],
             delivery_pairs=[(1, 2), (3, 4), (5, 6)],
             delivery_weights=[2] * 3,
             vehicle_capacities=[2] * 3,
@@ -83,7 +83,7 @@ class TestRouter:
         router = Router()
         router.solve(
             time_matrix=matrix,
-            depot_nodes=[0, 5],
+            driver_indicies=[0, 5],
             delivery_pairs=[(1, 2), (3, 4)],
             site_eta=[20000, 0, 0, 0, 0, 0],
         )
@@ -101,7 +101,7 @@ class TestRouter:
         router = Router()
         router.solve(
             time_matrix=matrix,
-            depot_nodes=[0, 5],
+            driver_indicies=[0, 5],
             delivery_pairs=[(1, 2), (3, 4)],
             time_worked=[20000, 0],
             max_time=20000,

@@ -1,15 +1,15 @@
 import pytest
 import numpy as np
 
-from src.tasks.distance_matrix import (
-    get_distance_matrix,
+from src.tasks.time_matrix import (
+    get_time_matrix,
     _build_distance_matrix,
     _send_request,
 )
 
 
 @pytest.mark.expensive
-def test_get_distance_matrix():
+def test_get_time_matrix():
     # 11 locations to ensure multiple requests must be sent
     locations = [
         "GAFFNEY CAR SALES, DELVIN, CO. WESTMEATH",
@@ -24,8 +24,8 @@ def test_get_distance_matrix():
         "122 Castlecurragh Vale, Buzzardstown, Dublin 15, Ireland",
         "47 Castleknock Rise, Blanchardstown, Dublin 15, Ireland",
     ]
-    full_matrix = np.array(get_distance_matrix(locations, [0]))
-    sub_matrix = np.array(get_distance_matrix(locations[:3], [0]))
+    full_matrix = np.array(get_time_matrix(locations, [0]))
+    sub_matrix = np.array(get_time_matrix(locations[:3], [0]))
 
     # ensure full matrix has matching sub matrix
     np.testing.assert_array_equal(full_matrix[:3, :3], sub_matrix)
@@ -38,14 +38,14 @@ def test_get_distance_matrix():
 
 
 @pytest.mark.expensive
-def test_get_distance_exclude_home():
+def test_get_time_exclude_home():
     locations = [
         "GAFFNEY CAR SALES, DELVIN, CO. WESTMEATH",
         "Marrowbone Lane, Saint Catherine's, Dublin, Ireland",
         "Cartow Vehicle Serivce, Finglas North, Dublin, Ireland",
     ]
     driver_locs = [0, 2]
-    matrix = np.array(get_distance_matrix(locations, driver_locs, return_home=False))
+    matrix = np.array(get_time_matrix(locations, driver_locs, return_home=False))
     assert np.all(matrix[:, driver_locs] == 0)
 
 

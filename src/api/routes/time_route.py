@@ -42,4 +42,6 @@ def create_time_matrix(
     )
 
     matrix = get_time_matrix(locations, driver_indicies, return_home)
-    return TimeMatrix(nodes=locations, driver_indicies=driver_indicies, matrix=matrix)
+    return TimeMatrix(
+        locations=locations, driver_indicies=driver_indicies, matrix=matrix
+    )
